@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "chaff"
+version = "0.1.0"
+description = "Semi-automated Gmail account creator for privacy decoy infrastructure"
+requires-python = ">=3.11"
+dependencies = [
+    "patchright>=1.0.0",
+    "faker>=28.0.0",
+    "typer[all]>=0.12.0",
+    "rich>=13.0.0",
+    "tomli>=2.0.0; python_version < '3.12'",
+]
+
+[project.scripts]
+chaff = "chaff.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/chaff"]
