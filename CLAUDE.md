@@ -35,6 +35,11 @@ src/chaff/
 - Errors raise typed exceptions from `exceptions.py`, caught at CLI layer
 - Logging via stdlib `logging`, not print statements
 
+## Session Rules
+- No code or syntax in chat — use pseudocode to show structure/intent. Only paste real code when explicitly asked.
+- Propose before acting — describe what you'll do and get approval before writing code or running commands.
+- Minimize shell output — use --quiet, -q, or redirect where possible to reduce token usage.
+
 ## Key Decisions
 - SQLite over JSON: need querying (find accounts by status, age, proxy used)
 - Typer over Click: less boilerplate, built-in Rich support

@@ -1,5 +1,7 @@
 # Chaff
 
+> **chaff** /tʃæf/ *noun* — strips of metal foil or similar material released in the air to confuse enemy radar. A countermeasure designed to obscure the real signal with noise.
+
 Semi-automated Gmail account creator for privacy decoy infrastructure.
 
 Creates believable fake identities, automates the Google signup flow via stealth browser, pauses for manual verification, and stores credentials locally. Designed as the identity factory layer for [Kanary's](https://www.kanary.com) denial & deception privacy strategy.
