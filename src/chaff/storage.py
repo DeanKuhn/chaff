@@ -89,7 +89,7 @@ def save_identity(
 
 
 def save_credential(
-    identity_id: int,
+    identity_id: int | None,
     email: str,
     password: str,
     recovery_phone: str | None = None,
