@@ -29,6 +29,12 @@ src/chaff/
 - One account per browser context; close and recreate between runs
 - All CLI commands go through Typer; no bare scripts
 
+## Change Discipline
+- Touch only what the task requires — don't "improve" adjacent code, comments, or formatting
+- Remove imports/variables/functions that YOUR changes made unused; leave pre-existing dead code alone
+- Every changed line should trace directly to the request
+- If you notice unrelated issues, mention them — don't fix them
+
 ## Conventions
 - Type hints everywhere
 - Async by default (Patchright async API)
@@ -38,6 +44,7 @@ src/chaff/
 ## Session Rules
 - No code or syntax in chat — use pseudocode to show structure/intent. Only paste real code when explicitly asked.
 - Propose before acting — describe what you'll do and get approval before writing code or running commands.
+- Define success criteria before implementing — "fix the bug" becomes "write a test that reproduces it, then make it pass."
 - Minimize shell output — use --quiet, -q, or redirect where possible to reduce token usage.
 
 ## Key Decisions
