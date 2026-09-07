@@ -42,7 +42,7 @@ async def create_account(identity: Identity, password: str, settings: Settings) 
         await page.get_by_label("Month").select_option(value=str(int(month)))
         await page.get_by_label("Day").fill(day.lstrip("0"))
         await page.get_by_label("Year").fill(year)
-        await page.get_by_label("Gender").select_option(value=3)
+        await page.get_by_label("Gender").select_option(value="3")
         await page.get_by_role("button", name="Next").click()
 
         # step 3: username
