@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from chaff.config import DB_PATH, ensure_dirs
 
@@ -80,7 +80,7 @@ def save_identity(
             username,
             backup_email,
             locale,
-            datetime.now(tz=timezone.utc).isoformat(),
+            datetime.now(tz=UTC).isoformat(),
         ),
     )
 
@@ -112,7 +112,7 @@ def save_credential(
             password,
             recovery_phone,
             proxy_used,
-            datetime.now(tz=timezone.utc).isoformat(),
+            datetime.now(tz=UTC).isoformat(),
         ),
     )
 
@@ -124,7 +124,7 @@ def get_identities(status: str | None = None) -> list[sqlite3.Row]:
     conn = get_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
+
     if status is None:
         cursor.execute("""
             SELECT i.*, c.email, c.status, c.proxy_used
@@ -134,14 +134,17 @@ def get_identities(status: str | None = None) -> list[sqlite3.Row]:
             ORDER BY i.created_at DESC
         """)
     else:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT i.*, c.email, c.status, c.proxy_used
             FROM identities i
             LEFT JOIN credentials c
                 ON c.identity_id = i.id
             WHERE c.status = ?
             ORDER BY i.created_at DESC
-        """, (status,))
+        """,
+            (status,),
+        )
 
     return cursor.fetchall()
 
@@ -150,8 +153,11 @@ def update_status(status: str, credential_id: int) -> None:
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE credentials SET status = ? WHERE id = ?
-    """, (status, credential_id))
+    """,
+        (status, credential_id),
+    )
 
     conn.commit()
