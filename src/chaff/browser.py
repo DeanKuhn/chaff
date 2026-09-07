@@ -10,9 +10,7 @@ from chaff.identity import Identity
 log = logging.getLogger(__name__)
 
 
-async def create_account(
-    identity: Identity, password: str, settings: Settings
-) -> str:
+async def create_account(identity: Identity, password: str, settings: Settings) -> str:
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=settings.headless,
@@ -29,7 +27,7 @@ async def create_account(
             "https://accounts.google.com/lifecycle/steps/signup/name"
             "?flowName=GlifWebSignIn&flowEntry=SignUp"
         )
-        
+
         if "unknownerror" in page.url:
             await page.get_by_role("button", name="Next").click()
 
