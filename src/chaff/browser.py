@@ -10,6 +10,22 @@ from chaff.identity import Identity
 log = logging.getLogger(__name__)
 
 
+MONTHS = {
+    1: "January",
+    2: "February",
+    3: "March",
+    4: "April",
+    5: "May",
+    6: "June",
+    7: "July",
+    8: "August",
+    9: "September",
+    10: "October",
+    11: "November",
+    12: "December",
+}
+
+
 async def create_account(identity: Identity, password: str, settings: Settings) -> str:
     async with async_playwright() as p:
         browser = await p.chromium.launch(
@@ -39,23 +55,33 @@ async def create_account(identity: Identity, password: str, settings: Settings) 
         # step 2: DOB + gender
         await page.wait_for_url("**/lifecycle/steps/signup/birthdaygender**")
         year, month, day = identity.dob.split("-")
-        await page.get_by_label("Month").select_option(value=str(int(month)))
         await page.get_by_label("Day").fill(day.lstrip("0"))
+        month_combobox = page.get_by_role("combobox", name="Month")
+        await month_combobox.click()
+        await page.get_by_role("option", name=MONTHS[int(month)]).click()
         await page.get_by_label("Year").fill(year)
-        await page.get_by_label("Gender").select_option(value="3")
+        gender_combobox = page.get_by_role("combobox", name="Gender")
+        await gender_combobox.click()
+        await page.get_by_role("option", name="Rather not say").click()
         await page.get_by_role("button", name="Next").click()
 
         # step 3: username
         await page.wait_for_url("**/lifecycle/steps/signup/username**")
+        await page.locator(
+            "[role='radiogroup'], input[name='Username']"
+        ).first.wait_for(state="visible", timeout=10000)
 
         # Google sometimes offers radio choices instead of a text input
-        custom_radio = page.get_by_text("Create your own Gmail address")
-        if await custom_radio.is_visible():
-            await custom_radio.click()
+        custom_option = page.locator("input[value='custom']")
+        if await custom_option.is_visible():
+            await custom_option.click()
+            await page.wait_for_timeout(1000)
+
+        username_input = page.locator("input[name='Username']")
+        await username_input.wait_for(state="visible")
 
         chosen_username = ""
         for username in identity.usernames:
-            username_input = page.locator("input[name='Username']")
             await username_input.fill(username)
             await page.get_by_role("button", name="Next").click()
 
