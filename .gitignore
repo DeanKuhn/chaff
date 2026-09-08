@@ -1,6 +1,7 @@
+.env
 .venv/
 .claude/
 .ruff_cache/
 src/chaff/.ruff_cache/
 src/chaff/__pycache__/
-kanary-decoy-system.md
+docs/
