@@ -16,3 +16,7 @@ class AccountSuspendedError(ChaffError):
 
 class VerificationRequiredError(ChaffError):
     pass
+
+
+class SmsVerificationError(ChaffError):
+    pass
