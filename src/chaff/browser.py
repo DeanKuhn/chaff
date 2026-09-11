@@ -4,7 +4,7 @@ import io
 import json
 import logging
 
-from patchright.async_api import TimeoutError as PlaywriteTimeout
+from patchright.async_api import TimeoutError as PlaywrightTimeout
 from patchright.async_api import async_playwright
 from PIL import Image
 from pyzbar.pyzbar import decode
@@ -118,7 +118,7 @@ async def create_account(identity: Identity, password: str, settings: Settings) 
             await _handle_qr_verification(context, page)
         except SmsVerificationError:
             raise
-        except PlaywriteTimeout:
+        except PlaywrightTimeout:
             log.info("no QR verification required, continuing")
 
         # step 6: recovery email — skip
