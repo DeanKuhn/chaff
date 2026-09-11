@@ -1,11 +1,21 @@
+"""Browser instructions to create an account."""
+
+import io
+import json
 import logging
 
+from patchright.async_api import TimeoutError as PlaywriteTimeout
 from patchright.async_api import async_playwright
-from rich.prompt import Confirm
+from PIL import Image
+from pyzbar.pyzbar import decode
 
 from chaff.config import Settings
-from chaff.exceptions import UsernameConflictError, VerificationRequiredError
+from chaff.exceptions import (
+    SmsVerificationError,
+    UsernameConflictError,
+)
 from chaff.identity import Identity
+from chaff.sms import AdbSmsSender
 
 log = logging.getLogger(__name__)
 
@@ -103,21 +113,13 @@ async def create_account(identity: Identity, password: str, settings: Settings) 
         await page.get_by_label("Confirm").fill(password)
         await page.get_by_role("button", name="Next").click()
 
-        # step 5: QR verification (manual)
+        # step 5: QR verification 
         try:
-            await page.wait_for_url(
-                "**/lifecycle/steps/signup/mophoneverification/**",
-                timeout=10000,
-            )
-            log.info("QR verification page detected — scan with your phone")
-            if not Confirm.ask(
-                "Scan the QR code with your phone, complete verification, then confirm"
-            ):
-                raise VerificationRequiredError("user skipped verification")
-        except Exception as exc:
-            if isinstance(exc, VerificationRequiredError):
-                raise
-            log.info("No QR verification required, continuing")
+            await _handle_qr_verification(context, page)
+        except SmsVerificationError:
+            raise
+        except PlaywriteTimeout:
+            log.info("no QR verification required, continuing")
 
         # step 6: recovery email — skip
         await page.wait_for_url("**/signup/addrecoveryemail**")
@@ -138,3 +140,57 @@ async def create_account(identity: Identity, password: str, settings: Settings) 
         await browser.close()
 
     return chosen_username
+
+
+async def _handle_qr_verification(context, page) -> None:
+    await page.wait_for_url(
+        "**/lifecycle/steps/signup/mophoneverification/**",
+        timeout=10000,
+    )
+
+    # decode QR code
+    qr_img = page.locator("img.pSHvwe").first
+    screenshot_bytes = await qr_img.screenshot()
+    img = Image.open(io.BytesIO(screenshot_bytes))
+    results = decode(img)
+    if results:
+        qr_url = results[0].data.decode()
+        log.info(f"QR code URL: {qr_url}")
+    else: 
+        raise SmsVerificationError("Could not decode QR code")
+
+    # Open up new page from QR code url 
+    verify_page = await context.new_page()
+    await verify_page.goto(qr_url)
+    await verify_page.wait_for_load_state("networkidle")
+
+    # Look for part of response with info we want about Sms sending
+    sms_data = []
+    async def capture_response(response):
+        if "devicephoneverification" in response.url:
+            body = await response.text()
+            sms_data.append(body)
+            log.info(f"Captured response from: {response.url}")
+
+    verify_page.on("response", capture_response)
+    await verify_page.get_by_text("Send SMS").click()
+    await verify_page.wait_for_timeout(5000)
+
+    try:
+        raw = next(d for d in sms_data if "MTflnb" in d)
+        line = next(l for l in raw.splitlines() if l.startswith("[["))
+        outer = json.loads(line)
+        inner = json.loads(outer[0][2])
+        short_code, message_body = inner[0], inner[1]
+    except (StopIteration, json.JSONDecodeError, IndexError, KeyError):
+        raise SmsVerificationError("Could not parse sms details from response")
+
+    # Send via android phone
+    sender = AdbSmsSender()
+    if not await sender.check_ready():
+        raise SmsVerificationError("no android phone connected")
+    await sender.send(short_code, message_body)
+    log.info(f"Sent out code to {short_code}: {message_body}")
+
+    await page.wait_for_url("**/signup/addrecoveryemail**", timeout=30000)
+    await verify_page.close()
