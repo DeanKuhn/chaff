@@ -20,3 +20,7 @@ class VerificationRequiredError(ChaffError):
 
 class SmsVerificationError(ChaffError):
     pass
+
+
+class WarmupError(ChaffError):
+    pass
