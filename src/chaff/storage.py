@@ -186,7 +186,7 @@ def get_credentials_by_status(status) -> list[sqlite3.Row]:
 
     cursor.execute(
         """
-        SELECT email, password, id
+        SELECT email, password, status, id
         FROM credentials
         WHERE status = ?
     """,
