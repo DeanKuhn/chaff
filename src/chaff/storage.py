@@ -161,3 +161,35 @@ def update_status(status: str, credential_id: int) -> None:
     )
 
     conn.commit()
+
+
+def get_credential_by_email(email) -> list[sqlite3.Row]:
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT email, password, status, id
+        FROM credentials
+        WHERE email = ?
+    """,
+        (email,),
+    )
+    return cursor.fetchall()
+
+
+def get_credentials_by_status(status) -> list[sqlite3.Row]:
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT email, password, id
+        FROM credentials
+        WHERE status = ?
+    """,
+        (status,),
+    )
+    return cursor.fetchall()
