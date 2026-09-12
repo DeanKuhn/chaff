@@ -16,6 +16,7 @@ src/chaff/
   cli.py        — Typer CLI entrypoint
   identity.py   — fake identity generation (name, DOB, username, backup email)
   browser.py    — Patchright signup flow automation
+  sms.py        — SMS sending abstraction (ADB backend for physical Android phone)
   storage.py    — SQLite read/write for identities + credentials
   warmup.py     — post-creation account warming (login, accept terms)
   config.py     — settings, proxy config, paths
