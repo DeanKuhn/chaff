@@ -115,7 +115,7 @@ async def create_account(identity: Identity, password: str, settings: Settings) 
 
         # step 5: QR verification 
         try:
-            await _handle_qr_verification(context, page)
+            await _handle_qr_verification(context, page, settings)
         except SmsVerificationError:
             raise
         except PlaywrightTimeout:
@@ -142,7 +142,7 @@ async def create_account(identity: Identity, password: str, settings: Settings) 
     return chosen_username
 
 
-async def _handle_qr_verification(context, page) -> None:
+async def _handle_qr_verification(context, page, settings) -> None:
     await page.wait_for_url(
         "**/lifecycle/steps/signup/mophoneverification/**",
         timeout=10000,
@@ -186,7 +186,7 @@ async def _handle_qr_verification(context, page) -> None:
         raise SmsVerificationError("Could not parse sms details from response")
 
     # Send via android phone
-    sender = AdbSmsSender()
+    sender = AdbSmsSender(device_serial=settings.adb_device_serial)
     if not await sender.check_ready():
         raise SmsVerificationError("no android phone connected")
     await sender.send(short_code, message_body)
