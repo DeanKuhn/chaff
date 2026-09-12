@@ -19,6 +19,7 @@ class Settings:
     slow_mo: int = 50
     timeout: int = 30000
     locale: str = "en_US"
+    adb_device_serial: str | None = None
 
 
 def load_config(path: Path | None):
