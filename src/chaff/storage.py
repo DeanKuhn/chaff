@@ -1,7 +1,11 @@
+"""Create database tables, save, update, and fetch data from them."""
+
 import sqlite3
+from dataclasses import asdict
 from datetime import UTC, datetime
 
 from chaff.config import DB_PATH, ensure_dirs
+from chaff.fingerprint import DeviceProfile
 
 CONNECTION: sqlite3.Connection | None = None
 
@@ -42,6 +46,24 @@ def init_db() -> None:
             status          TEXT DEFAULT 'created',
             proxy_used      TEXT,
             created_at      TEXT NOT NULL,
+            FOREIGN KEY (identity_id) REFERENCES identities(id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS device_profiles (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            identity_id         INTEGER NOT NULL,
+            viewport_width      INTEGER NOT NULL,
+            viewport_height     INTEGER NOT NULL,
+            screen_width        INTEGER NOT NULL,
+            screen_height       INTEGER NOT NULL,
+            timezone_id         TEXT NOT NULL,
+            locale              TEXT NOT NULL,
+            user_agent          TEXT NOT NULL,
+            color_depth         INTEGER NOT NULL,
+            device_scale_factor INTEGER NOT NULL,
+            platform            TEXT NOT NULL,
             FOREIGN KEY (identity_id) REFERENCES identities(id)
         )
     """)
@@ -114,6 +136,28 @@ def save_credential(
             proxy_used,
             datetime.now(tz=UTC).isoformat(),
         ),
+    )
+
+    conn.commit()
+    return cursor.lastrowid
+
+
+def save_profile(
+    identity_id: int | None,
+    profile: DeviceProfile | None,
+) -> int | None:
+    if not profile:
+        return None
+    d = asdict(profile)
+    columns = ", ".join(d.keys())
+    placeholders = ", ".join(["?"] * (len(d) + 1))
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        f"INSERT INTO device_profiles (identity_id, {columns}) VALUES ({placeholders})",
+        (identity_id, *d.values()),
     )
 
     conn.commit()
@@ -193,3 +237,27 @@ def get_credentials_by_status(status) -> list[sqlite3.Row]:
         (status,),
     )
     return cursor.fetchall()
+
+
+def get_profile(identity_id: int) -> DeviceProfile | None:
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT *
+        FROM device_profiles
+        WHERE identity_id = ?
+    """,
+        (identity_id,),
+    )
+    row = cursor.fetchone()
+
+    if not row:
+        return None
+    
+    d = dict(row)
+    del d["id"]
+    del d["identity_id"]
+    return DeviceProfile(**d)
