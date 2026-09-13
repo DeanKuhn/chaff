@@ -9,15 +9,16 @@ from rich.table import Table
 from chaff.browser import create_account
 from chaff.config import Settings
 from chaff.exceptions import ChaffError, WarmupError
+from chaff.gmail import get_gmail_service
 from chaff.identity import generate_identity, generate_password
 from chaff.storage import (
+    get_credential_by_email,
+    get_credentials_by_status,
     get_identities,
     init_db,
     save_credential,
     save_identity,
     update_status,
-    get_credential_by_email,
-    get_credentials_by_status,
 )
 from chaff.warmup import warm_account
 
@@ -27,6 +28,7 @@ console = Console()
 
 @app.command()
 def create(
+    timeout: int = typer.Option(30000, "--timeout", "-t"),
     locale: str = typer.Option("en_US", "--locale", "-l"),
     backup_email: str | None = typer.Option(None, "--backup-email", "-b"),
     proxy: str | None = typer.Option(None, "--proxy", "-p"),
@@ -35,6 +37,7 @@ def create(
 ) -> None:
     init_db()
     settings = Settings(
+        timeout=timeout,
         headless=headless,
         proxy_url=proxy,
         proxy_enabled=proxy is not None,
@@ -50,7 +53,12 @@ def create(
 
             password = generate_password()
             username = asyncio.run(
-                create_account(identity=identity, password=password, settings=settings)
+                create_account(
+                    identity=identity,
+                    password=password,
+                    settings=settings,
+                    backup_email=backup_email,
+                )
             )
             success_id = save_identity(
                 first_name=identity.first_name,
@@ -122,6 +130,7 @@ def update(
 
 @app.command()
 def warmup(
+    timeout: int = typer.Option(30000, "--timeout", "-t"),
     email: str | None = typer.Option(None, "--email", "-e"),
     status: str | None = typer.Option(None, "--status", "-s"),
     locale: str = typer.Option("en_US", "--locale", "-l"),
@@ -130,17 +139,22 @@ def warmup(
 ) -> None:
     init_db()
     settings = Settings(
+        timeout=timeout,
         headless=headless,
         proxy_url=proxy,
         proxy_enabled=proxy is not None,
         locale=locale,
     )
 
+    service = get_gmail_service()
+
     if email:
         row = get_credential_by_email(email)
         if row[0]["status"] != "warmed":
             try:
-                asyncio.run(warm_account(row[0]["email"], row[0]["password"], settings))
+                asyncio.run(
+                    warm_account(row[0]["email"], row[0]["password"], settings, service)
+                )
                 update_status("warmed", row[0]["id"])
                 console.print(f"[green]Warmed {row[0]['email']}[/green]")
             except WarmupError as e:
@@ -150,7 +164,7 @@ def warmup(
         for row in rows:
             if row["status"] != "warmed":
                 try:
-                    asyncio.run(warm_account(row["email"], row["password"], settings))
+                    asyncio.run(warm_account(row["email"], row["password"], settings, service))
                     update_status("warmed", row["id"])
                     console.print(f"[green]Warmed {row['email']}[/green]")
                 except WarmupError as e:
