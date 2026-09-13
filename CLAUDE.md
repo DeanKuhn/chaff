@@ -4,11 +4,12 @@
 Semi-automated Gmail account creator for privacy decoy infrastructure. Built for Kanary's denial & deception workflow. Creates believable identities, automates the signup flow via stealth browser, pauses for manual phone/QR verification, logs credentials to local store.
 
 ## Stack
-- Python 3.11+
+- Python 3.11+, managed with uv
 - Patchright (stealth Playwright fork, Chromium only)
 - Faker (identity generation)
 - SQLite (credential + identity storage)
 - Typer + Rich (CLI + terminal UI)
+- Google Gmail API (recovery email verification code fetching)
 
 ## Architecture
 ```
@@ -20,6 +21,7 @@ src/chaff/
   storage.py    — SQLite read/write for identities + credentials
   warmup.py     — post-creation account warming (login, accept terms)
   config.py     — settings, proxy config, paths
+  gmail.py      — Gmail API auth + verification code fetching for recovery email
 ```
 
 ## Hard Rules
