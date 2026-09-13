@@ -161,6 +161,9 @@ def warmup(
 
     if email:
         row = get_credential_by_email(email)
+        if row[0]["proxy_used"]:
+            settings.proxy_url = row[0]["proxy_used"]
+
         if row[0]["status"] != "warmed":
             profile = get_profile(row[0]["identity_id"])
             try:
@@ -174,6 +177,9 @@ def warmup(
     elif status:
         rows = get_credentials_by_status(status)
         for row in rows:
+            if row["proxy_used"]:
+                settings.proxy_url = row["proxy_used"]
+
             if row["status"] != "warmed":
                 profile = get_profile(row["identity_id"])
                 try:
