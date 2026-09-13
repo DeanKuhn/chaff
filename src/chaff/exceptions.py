@@ -24,3 +24,7 @@ class SmsVerificationError(ChaffError):
 
 class WarmupError(ChaffError):
     pass
+
+
+class GmailError(ChaffError):
+    pass
