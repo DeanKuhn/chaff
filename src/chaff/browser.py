@@ -19,6 +19,7 @@ from chaff.fingerprint import (
 )
 from chaff.identity import Identity
 from chaff.sms import AdbSmsSender
+from chaff.utils import human_type, random_delay
 
 log = logging.getLogger(__name__)
 
@@ -55,6 +56,7 @@ async def create_account(
         if device_profile:
             context_args.update(device_profile.to_context_kwargs())
         browser = await p.chromium.launch(
+            channel="chrome",
             headless=settings.headless,
             slow_mo=settings.slow_mo,
             args=["--disable-external-intent-requests"],
@@ -72,21 +74,29 @@ async def create_account(
             await page.get_by_role("button", name="Next").click()
 
         # step 1: name
-        await page.get_by_label("First name").fill(identity.first_name)
-        await page.get_by_label("Last name").fill(identity.last_name)
+        await human_type(page.get_by_label("First name"), identity.first_name)
+        await random_delay(0.3, 1.0)
+        await human_type(page.get_by_label("Last name"), identity.last_name)
+        await random_delay(0.5, 1.5)
         await page.get_by_role("button", name="Next").click()
 
         # step 2: DOB + gender
         await page.wait_for_url("**/lifecycle/steps/signup/birthdaygender**")
         year, month, day = identity.dob.split("-")
-        await page.get_by_label("Day").fill(day.lstrip("0"))
+        await human_type(page.get_by_label("Day"), day.lstrip("0"))
+        await random_delay(0.3, 0.8)
         month_combobox = page.get_by_role("combobox", name="Month")
         await month_combobox.click()
+        await random_delay(0.2, 0.5)
         await page.get_by_role("option", name=MONTHS[int(month)]).click()
-        await page.get_by_label("Year").fill(year)
+        await random_delay(0.3, 0.8)
+        await human_type(page.get_by_label("Year"), year)
+        await random_delay(0.3, 0.8)
         gender_combobox = page.get_by_role("combobox", name="Gender")
         await gender_combobox.click()
+        await random_delay(0.2, 0.5)
         await page.get_by_role("option", name="Rather not say").click()
+        await random_delay(0.5, 1.5)
         await page.get_by_role("button", name="Next").click()
 
         # step 3: username
@@ -106,7 +116,9 @@ async def create_account(
 
         chosen_username = ""
         for username in identity.usernames:
-            await username_input.fill(username)
+            await username_input.fill("")
+            await human_type(username_input, username)
+            await random_delay(0.5, 1.5)
             await page.get_by_role("button", name="Next").click()
 
             try:
@@ -123,8 +135,10 @@ async def create_account(
             raise UsernameConflictError("all usernames taken")
 
         # step 4: password
-        await page.get_by_label("Password", exact=True).fill(password)
-        await page.get_by_label("Confirm").fill(password)
+        await human_type(page.get_by_label("Password", exact=True), password)
+        await random_delay(0.3, 1.0)
+        await human_type(page.get_by_label("Confirm"), password)
+        await random_delay(0.5, 1.5)
         await page.get_by_role("button", name="Next").click()
 
         # step 5: QR verification
@@ -140,7 +154,8 @@ async def create_account(
         recoveryemail_input = page.locator("input[name='Recovery Email']")
         await recoveryemail_input.wait_for(state="visible")
         if backup_email:
-            await recoveryemail_input.fill(backup_email)
+            await human_type(recoveryemail_input, backup_email)
+            await random_delay(0.5, 1.5)
             await page.get_by_role("button", name="Next").click()
         else:
             await page.get_by_role("button", name="Skip").click()
