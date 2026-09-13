@@ -7,6 +7,7 @@ from patchright.async_api import async_playwright
 
 from chaff.fingerprint import DeviceProfile
 from chaff.gmail import fetch_verification_code
+from chaff.utils import human_type, random_delay
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ async def warm_account(
         if device_profile:
             context_args.update(device_profile.to_context_kwargs())
         browser = await p.chromium.launch(
+            channel="chrome",
             headless=settings.headless,
             slow_mo=settings.slow_mo,
             args=["--disable-external-intent-requests"],
@@ -42,14 +44,16 @@ async def warm_account(
         await page.locator("input[name='identifier']").wait_for(
             state="visible", timeout=10000
         )
-        await page.locator("input[name='identifier']").fill(email)
+        await human_type(page.locator("input[name='identifier']"), email)
+        await random_delay(0.5, 1.5)
         await page.get_by_role("button", name="Next").click()
 
         # password setup
         await page.locator("input[name='Passwd']").wait_for(
             state="visible", timeout=10000
         )
-        await page.locator("input[name='Passwd']").fill(password)
+        await human_type(page.locator("input[name='Passwd']"), password)
+        await random_delay(0.5, 1.5)
         await page.get_by_role("button", name="Next").click()
 
         # notification page -> try another way
@@ -64,7 +68,8 @@ async def warm_account(
 
         # fill code
         await page.locator("input[type='tel']").wait_for(state="visible", timeout=10000)
-        await page.locator("input[type='tel']").fill(code)
+        await human_type(page.locator("input[type='tel']"), code)
+        await random_delay(0.5, 1.5)
         await page.get_by_role("button", name="Next").click()
 
         # optional "update password" page
