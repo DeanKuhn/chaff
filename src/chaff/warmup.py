@@ -84,6 +84,21 @@ async def warm_account(
         await page.wait_for_load_state("networkidle")
         await page.wait_for_timeout(10000)
 
+        # visit youtube (doomscroll a bit)
+        await page.goto("https://www.youtube.com")
+        await page.wait_for_load_state("networkidle")
+        await random_delay(10, 30)
+
+        # visit google
+        await page.goto("https://www.google.com")
+        await page.wait_for_load_state("networkidle")
+        await random_delay(5, 15)
+
+        # visit drive (everyone's favorite 100% private cloud storage)
+        await page.goto("https://drive.google.com")
+        await page.wait_for_load_state("networkidle")
+        await random_delay(5, 15)
+
         await page.close()
         await context.close()
         await browser.close()
