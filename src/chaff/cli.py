@@ -9,15 +9,18 @@ from rich.table import Table
 from chaff.browser import create_account
 from chaff.config import Settings
 from chaff.exceptions import ChaffError, WarmupError
+from chaff.fingerprint import create_profile
 from chaff.gmail import get_gmail_service
 from chaff.identity import generate_identity, generate_password
 from chaff.storage import (
     get_credential_by_email,
     get_credentials_by_status,
     get_identities,
+    get_profile,
     init_db,
     save_credential,
     save_identity,
+    save_profile,
     update_status,
 )
 from chaff.warmup import warm_account
@@ -34,6 +37,7 @@ def create(
     proxy: str | None = typer.Option(None, "--proxy", "-p"),
     headless: bool = typer.Option(False, "--headless"),
     count: int = typer.Option(1, "--count", "-c"),
+    proxy_geo: str = typer.Option(None, "--proxy-geo", "-g"),
 ) -> None:
     init_db()
     settings = Settings(
@@ -48,6 +52,7 @@ def create(
     for _ in range(count):
         try:
             identity = generate_identity(locale=locale, backup_email=backup_email)
+            profile = create_profile(proxy_geo)
             for i, name in enumerate(identity.usernames, 1):
                 console.print(f"    {i}: {name}")
 
@@ -58,6 +63,7 @@ def create(
                     password=password,
                     settings=settings,
                     backup_email=backup_email,
+                    device_profile=profile,
                 )
             )
             success_id = save_identity(
@@ -75,12 +81,17 @@ def create(
                 recovery_phone=None,
                 proxy_used=proxy,
             )
+            success_profile = save_profile(
+                identity_id=success_id,
+                profile=profile,
+            )
 
             succeed += 1
             console.print(
                 f"[green]Success! Email created. Summary:\n"
                 f"    email: {username}@gmail.com\n"
-                f"    success credential: {success_cred}[/green]"
+                f"    success credential: {success_cred}"
+                f"    success profile: {success_profile}[/green]"
             )
 
         except ChaffError as e:
@@ -151,9 +162,10 @@ def warmup(
     if email:
         row = get_credential_by_email(email)
         if row[0]["status"] != "warmed":
+            profile = get_profile(row[0]["identity_id"])
             try:
                 asyncio.run(
-                    warm_account(row[0]["email"], row[0]["password"], settings, service)
+                    warm_account(row[0]["email"], row[0]["password"], settings, service, profile)
                 )
                 update_status("warmed", row[0]["id"])
                 console.print(f"[green]Warmed {row[0]['email']}[/green]")
@@ -163,8 +175,11 @@ def warmup(
         rows = get_credentials_by_status(status)
         for row in rows:
             if row["status"] != "warmed":
+                profile = get_profile(row["identity_id"])
                 try:
-                    asyncio.run(warm_account(row["email"], row["password"], settings, service))
+                    asyncio.run(
+                        warm_account(row["email"], row["password"], settings, service, profile)
+                    )
                     update_status("warmed", row["id"])
                     console.print(f"[green]Warmed {row['email']}[/green]")
                 except WarmupError as e:
