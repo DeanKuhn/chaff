@@ -14,6 +14,9 @@ from chaff.exceptions import (
     SmsVerificationError,
     UsernameConflictError,
 )
+from chaff.fingerprint import (
+    DeviceProfile,
+)
 from chaff.identity import Identity
 from chaff.sms import AdbSmsSender
 
@@ -36,16 +39,27 @@ MONTHS = {
 }
 
 
-async def create_account(identity: Identity, password: str, settings: Settings) -> str:
+async def create_account(
+    identity: Identity,
+    password: str,
+    settings: Settings,
+    backup_email: str | None = None,
+    device_profile: DeviceProfile | None = None,
+) -> str:
     async with async_playwright() as p:
+        context_args = {
+            "locale": settings.locale,
+        }
+        if settings.proxy_url:
+            context_args["proxy"] = {"server": settings.proxy_url}
+        if device_profile:
+            context_args.update(device_profile.to_context_kwargs())
         browser = await p.chromium.launch(
             headless=settings.headless,
             slow_mo=settings.slow_mo,
+            args=["--disable-external-intent-requests"],
         )
-        context = await browser.new_context(
-            locale=settings.locale,
-            proxy={"server": settings.proxy_url} if settings.proxy_url else None,
-        )
+        context = await browser.new_context(**context_args)  # type:ignore
         page = await context.new_page()
         page.set_default_timeout(settings.timeout)
 
@@ -113,7 +127,7 @@ async def create_account(identity: Identity, password: str, settings: Settings) 
         await page.get_by_label("Confirm").fill(password)
         await page.get_by_role("button", name="Next").click()
 
-        # step 5: QR verification 
+        # step 5: QR verification
         try:
             await _handle_qr_verification(context, page, settings)
         except SmsVerificationError:
@@ -123,7 +137,13 @@ async def create_account(identity: Identity, password: str, settings: Settings) 
 
         # step 6: recovery email — skip
         await page.wait_for_url("**/signup/addrecoveryemail**")
-        await page.get_by_role("button", name="Skip").click()
+        recoveryemail_input = page.locator("input[name='Recovery Email']")
+        await recoveryemail_input.wait_for(state="visible")
+        if backup_email:
+            await recoveryemail_input.fill(backup_email)
+            await page.get_by_role("button", name="Next").click()
+        else:
+            await page.get_by_role("button", name="Skip").click()
 
         # step 7: review
         await page.get_by_role("button", name="Next").click()
@@ -156,16 +176,17 @@ async def _handle_qr_verification(context, page, settings) -> None:
     if results:
         qr_url = results[0].data.decode()
         log.info(f"QR code URL: {qr_url}")
-    else: 
+    else:
         raise SmsVerificationError("Could not decode QR code")
 
-    # Open up new page from QR code url 
+    # Open up new page from QR code url
     verify_page = await context.new_page()
     await verify_page.goto(qr_url)
     await verify_page.wait_for_load_state("networkidle")
 
     # Look for part of response with info we want about Sms sending
     sms_data = []
+
     async def capture_response(response):
         if "devicephoneverification" in response.url:
             body = await response.text()
