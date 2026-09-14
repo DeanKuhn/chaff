@@ -5,6 +5,7 @@ import random
 
 
 async def human_type(locator, text: str) -> None:
+    await locator.click()
     for c in text:
         if c.isdigit():
             delay = random.uniform(0.1, 0.25)
@@ -12,7 +13,7 @@ async def human_type(locator, text: str) -> None:
             delay = random.uniform(0.3, 0.6)
         else:
             delay = random.uniform(0.05, 0.12)
-        await locator.press(c)
+        await locator.page.keyboard.insert_text(c)
         await asyncio.sleep(delay)
     await asyncio.sleep(random.uniform(0.2, 0.5))
 

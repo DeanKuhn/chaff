@@ -1,12 +1,14 @@
 """CLI for various chaff commands."""
 
 import asyncio
+import logging
+from pathlib import Path
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
-from chaff.browser import create_account
+from chaff.browser_manual_qr import create_account
 from chaff.config import Settings
 from chaff.exceptions import ChaffError, WarmupError
 from chaff.fingerprint import create_profile
@@ -25,13 +27,15 @@ from chaff.storage import (
 )
 from chaff.warmup import warm_account
 
+logging.basicConfig(filename = str(Path.home() / ".chaff" / "chaff.log"), level=logging.INFO)
+
 app = typer.Typer()
 console = Console()
 
 
 @app.command()
 def create(
-    timeout: int = typer.Option(30000, "--timeout", "-t"),
+    timeout: int = typer.Option(100000, "--timeout", "-t"),
     locale: str = typer.Option("en_US", "--locale", "-l"),
     backup_email: str | None = typer.Option(None, "--backup-email", "-b"),
     proxy: str | None = typer.Option(None, "--proxy", "-p"),

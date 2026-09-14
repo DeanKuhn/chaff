@@ -214,7 +214,7 @@ def get_credential_by_email(email) -> list[sqlite3.Row]:
 
     cursor.execute(
         """
-        SELECT email, password, status, id
+        SELECT email, password, status, id, identity_id, proxy_used
         FROM credentials
         WHERE email = ?
     """,
@@ -230,7 +230,7 @@ def get_credentials_by_status(status) -> list[sqlite3.Row]:
 
     cursor.execute(
         """
-        SELECT email, password, status, id
+        SELECT email, password, status, id, identity_id, proxy_used
         FROM credentials
         WHERE status = ?
     """,
