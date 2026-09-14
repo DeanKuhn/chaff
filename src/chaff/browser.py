@@ -47,6 +47,7 @@ async def create_account(
     backup_email: str | None = None,
     device_profile: DeviceProfile | None = None,
 ) -> str:
+    log.info(f"Password for {identity.last_name}, {identity.first_name}: {password}")
     async with async_playwright() as p:
         context_args = {
             "locale": settings.locale,
@@ -151,7 +152,7 @@ async def create_account(
 
         # step 6: recovery email — skip
         await page.wait_for_url("**/signup/addrecoveryemail**")
-        recoveryemail_input = page.locator("input[name='Recovery Email']")
+        recoveryemail_input = page.locator("input[name='recovery']")
         await recoveryemail_input.wait_for(state="visible")
         if backup_email:
             await human_type(recoveryemail_input, backup_email)
@@ -160,16 +161,54 @@ async def create_account(
         else:
             await page.get_by_role("button", name="Skip").click()
 
+        # step 6b: optional second recovery email prompt
+        try:
+            skip_btn = page.get_by_role("button", name="Skip")
+            await skip_btn.wait_for(state="visible", timeout=5000)
+            await skip_btn.click()
+        except PlaywrightTimeout:
+            pass
+
         # step 7: review
+        await random_delay(5, 10)
         await page.get_by_role("button", name="Next").click()
 
         # step 8: TOS
+        await random_delay(5, 10)
         await page.get_by_role("button", name="I agree").click()
 
         # step 9: confirm settings dialog
+        await random_delay(5, 10)
         await page.get_by_role("button", name="Confirm").click()
 
         log.info("Account created: %s@gmail.com", chosen_username)
+
+        # warmup: visit Google properties while already logged in
+        await random_delay(2, 3)
+        await page.goto("https://mail.google.com")
+        await page.wait_for_load_state("networkidle")
+        sign_in_btn = page.get_by_text("Sign in")
+        try:
+            await sign_in_btn.wait_for(state="visible", timeout=5000)
+            await sign_in_btn.click()
+            await page.wait_for_load_state("networkidle")
+        except PlaywrightTimeout:
+            pass
+        await random_delay(10, 20)
+
+        await page.goto("https://www.youtube.com")
+        await page.wait_for_load_state("networkidle")
+        await random_delay(10, 30)
+
+        await page.goto("https://www.google.com")
+        await page.wait_for_load_state("networkidle")
+        await random_delay(5, 15)
+
+        await page.goto("https://drive.google.com")
+        await page.wait_for_load_state("networkidle")
+        await random_delay(5, 15)
+
+        log.info("Warmup browsing complete for %s@gmail.com", chosen_username)
 
         await context.close()
         await browser.close()
@@ -228,5 +267,5 @@ async def _handle_qr_verification(context, page, settings) -> None:
     await sender.send(short_code, message_body)
     log.info(f"Sent out code to {short_code}: {message_body}")
 
-    await page.wait_for_url("**/signup/addrecoveryemail**", timeout=30000)
+    await page.wait_for_url("**/signup/addrecoveryemail**", timeout=100000)
     await verify_page.close()
