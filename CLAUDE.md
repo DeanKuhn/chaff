@@ -5,7 +5,7 @@ Semi-automated Gmail account creator for privacy decoy infrastructure. Built for
 
 ## Stack
 - Python 3.11+, managed with uv
-- Patchright (stealth Playwright fork, Chromium only)
+- Patchright (stealth Playwright fork, Chrome via `channel="chrome"`)
 - Faker (identity generation)
 - SQLite (credential + identity storage)
 - Typer + Rich (CLI + terminal UI)
@@ -16,9 +16,11 @@ Semi-automated Gmail account creator for privacy decoy infrastructure. Built for
 src/chaff/
   cli.py        — Typer CLI entrypoint
   identity.py   — fake identity generation (name, DOB, username, backup email)
-  browser.py    — Patchright signup flow automation
-  sms.py        — SMS sending abstraction (ADB backend for physical Android phone)
-  storage.py    — SQLite read/write for identities + credentials
+  browser.py    — Patchright signup flow automation + post-creation warmup
+  browser_manual_qr.py — Temp: alternate QR flow for testing
+  fingerprint.py — Device profile generation and management
+  sms.py        — SMS sending abstraction (ADB/Termux backend)
+  storage.py    — SQLite read/write for identities, credentials, and device profiles
   warmup.py     — post-creation account warming (login, accept terms)
   config.py     — settings, proxy config, paths
   gmail.py      — Gmail API auth + verification code fetching for recovery email
@@ -29,7 +31,7 @@ src/chaff/
 - All credentials go to SQLite DB at `~/.chaff/chaff.db`
 - Browser sessions use residential proxies when configured; never use datacenter IPs
 - Patchright only — do not use vanilla Playwright or Selenium
-- One account per browser context; close and recreate between runs
+- Fresh browser context per signup session
 - All CLI commands go through Typer; no bare scripts
 
 ## Change Discipline
@@ -54,4 +56,4 @@ src/chaff/
 - SQLite over JSON: need querying (find accounts by status, age, proxy used)
 - Typer over Click: less boilerplate, built-in Rich support
 - Faker over hand-rolled: locale support, consistent API, less maintenance
-- Pause/resume at verification via Rich prompt, not a web UI
+- QR verification automated via ADB SMS, not manual pause/resume
