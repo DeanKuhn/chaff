@@ -261,8 +261,8 @@ async def _handle_qr_verification(context, page, settings) -> None:
         raise SmsVerificationError("Could not parse sms details from response")
 
     print("\n>>> Send this SMS from the other phone <<<")
-    print(f"    To: {short_code}")
-    print(f"    Body: {message_body}\n")
+    print(f"    To: {repr(short_code)}")
+    print(f"    Body: {repr(message_body)}\n")
     input("Press Enter after SMS is sent...")
 
     await page.wait_for_url("**/signup/addrecoveryemail**", timeout=120000)
